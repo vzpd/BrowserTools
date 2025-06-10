@@ -1,72 +1,55 @@
 /**
- * 安全地注入CSS，忽略在特殊页面上可能发生的错误。
- * @param {object} injection The injection object for insertCSS.
+ * Applies settings for a tab on page load using the same robust logic as the popup.
+ * @param {number} tabId The ID of the tab being updated.
+ * @param {string} url The URL of the tab.
  */
-async function safeInsertCSS(injection) {
-  try {
-      await chrome.scripting.insertCSS(injection);
-  } catch (err) {
-      // 忽略错误，这在特殊页面或CSS已注入时是正常现象
-  }
-}
-
-/**
-* 安全地移除CSS，忽略在CSS未注入时可能发生的错误。
-* @param {object} injection The injection object for removeCSS.
-*/
-async function safeRemoveCSS(injection) {
-  try {
-      await chrome.scripting.removeCSS(injection);
-  } catch (err) {
-      // 忽略错误，这在CSS从未注入时是正常现象
-  }
-}
-
-/**
-* 根据已存储的设置为指定标签页应用样式。
-* @param {number} tabId The ID of the tab being updated.
-* @param {string} url The URL of the tab.
-*/
 async function applySettingsForTab(tabId, url) {
-  if (!url || !url.startsWith('http')) {
-      return;
-  }
+    if (!url || !url.startsWith('http')) {
+        return;
+    }
 
-  try {
-      const hostname = new URL(url).hostname;
-      const data = await chrome.storage.sync.get(hostname);
-      const settings = data[hostname];
+    try {
+        const hostname = new URL(url).hostname;
+        const data = await chrome.storage.sync.get(hostname);
+        const settings = data[hostname];
 
-      if (settings) {
-          // 应用或移除暗黑模式
-          if (settings.darkMode) {
-              await safeInsertCSS({ target: { tabId }, files: ['styles/dark-mode.css'] });
-          } else {
-              await safeRemoveCSS({ target: { tabId }, files: ['styles/dark-mode.css'] });
-          }
+        // First, always try to remove any existing styles to ensure a clean slate on reload.
+        await chrome.scripting.removeCSS({
+            target: { tabId: tabId },
+            files: ['styles/dark-mode.css', 'styles/hide-images.css']
+        }).catch(() => {}); // Suppress errors
 
-          // 应用或移除隐藏图片样式
-          if (!settings.showImages) {
-              await safeInsertCSS({ target: { tabId }, files: ['styles/hide-images.css'] });
-          } else {
-              await safeRemoveCSS({ target: { tabId }, files: ['styles/hide-images.css'] });
-          }
-      } else {
-          // 如果没有设置，确保移除所有样式，恢复默认状态
-          await safeRemoveCSS({ target: { tabId }, files: ['styles/dark-mode.css'] });
-          await safeRemoveCSS({ target: { tabId }, files: ['styles/hide-images.css'] });
-      }
-  } catch (error) {
-      console.warn(`无法为 ${url} 应用设置:`, error);
-  }
+        // If settings exist for this site, apply them.
+        if (settings) {
+            const filesToInsert = [];
+            if (settings.darkMode) {
+                filesToInsert.push('styles/dark-mode.css');
+            }
+            if (!settings.showImages) {
+                filesToInsert.push('styles/hide-images.css');
+            }
+
+            if (filesToInsert.length > 0) {
+                await chrome.scripting.insertCSS({
+                    target: { tabId: tabId },
+                    files: filesToInsert
+                });
+            }
+        }
+    } catch (error) {
+        // This can happen if the extension tries to act on a tab that's already closed.
+        if (!error.message.includes('No tab with id')) {
+            console.warn(`无法为 ${url} 应用设置:`, error);
+        }
+    }
 }
 
 /**
-* 监听标签页更新事件，以便在页面加载时自动应用设置。
-*/
+ * Listens for tab updates to automatically apply settings on page load.
+ */
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  // 仅在页面开始加载时注入，防止重复操作
-  if (changeInfo.status === 'loading' && tab.url) {
-      applySettingsForTab(tabId, tab.url);
-  }
+    // Only inject when the page is loading to avoid multiple injections.
+    if (changeInfo.status === 'loading' && tab.url) {
+        applySettingsForTab(tabId, tab.url);
+    }
 });
