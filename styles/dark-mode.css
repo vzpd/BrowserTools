@@ -1,0 +1,27 @@
+/*
+ * A robust method to force dark mode on most websites.
+ * It inverts all colors and then re-inverts media elements
+ * to prevent them from looking like photo negatives.
+ */
+ html {
+    -webkit-filter: invert(1) hue-rotate(180deg) !important;
+    filter: invert(1) hue-rotate(180deg) !important;
+    /* This background helps prevent the "white flash" on page load */
+    background: #111 !important;
+    height: 100% !important;
+}
+
+/*
+ * Re-invert images, videos, iframes, and other visual elements
+ * so they appear normal in the inverted page.
+ */
+img,
+video,
+iframe,
+svg,
+embed,
+object,
+[style*="background-image"] {
+    -webkit-filter: invert(1) hue-rotate(180deg) !important;
+    filter: invert(1) hue-rotate(180deg) !important;
+}

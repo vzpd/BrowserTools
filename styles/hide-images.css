@@ -1,0 +1,13 @@
+/*
+ * Forcefully hides images and picture elements.
+ * Using !important to override inline styles or other stylesheets.
+ */
+ img,
+ picture,
+ [style*="background-image"],
+ svg,
+ image {
+     display: none !important;
+     visibility: hidden !important;
+ }
+ 

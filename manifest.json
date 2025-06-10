@@ -1,31 +1,46 @@
 {
   "manifest_version": 3,
-  "name": "图片屏蔽与夜间模式插件",
-  "version": "1.0.0",
-  "description": "可屏蔽图片、开启黑夜模式并支持白名单的网站增强插件。",
+  "name": "网页暗黑模式与图片控制器",
+  "version": "1.1.0",
+  "description": "为任何网站强制启用暗黑模式，并控制图片显示。每个网站的设置都会被记住。",
   "permissions": [
     "storage",
-    "scripting"
+    "activeTab",
+    "scripting",
+    "tabs"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "http://*/*",
+    "https://*/*"
   ],
-  "options_page": "options.html",
-  "content_scripts": [
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "run_at": "document_end"
+      "resources": [
+        "styles/dark-mode.css",
+        "styles/hide-images.css"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
-  "icons": {
-    "16": "assets/icon16.png",
-    "32": "assets/icon32.png",
-    "48": "assets/icon48.png",
-    "128": "assets/icon128.png"
-  },
-  "action": {
-    "default_title": "图片屏蔽与夜间模式插件",
-    "default_popup": "popup.html"
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
   }
 }
